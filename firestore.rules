@@ -1,0 +1,114 @@
+rules_version = '2';
+
+// Data layout
+//   users/{uid}                          -> profile (one per user)
+//   users/{uid}/applications/{appId}     -> that user's job applications
+//   admins/{uid}                         -> exists = user is an admin (create only in the Firebase console)
+//
+// Same guarantees as the old Supabase RLS policies:
+//   * users can only read/write their own profile and applications
+//   * profiles cannot be deleted from the app
+//   * admins can READ everyone's profiles and applications (for the admin dashboard)
+//   * nobody can make themselves admin from the app
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ---------- field helpers ----------
+    function optString(d, field, maxLen) {
+      return !(field in d) || d[field] == null || (d[field] is string && d[field].size() <= maxLen);
+    }
+
+    function optNumber(d, field) {
+      return !(field in d) || d[field] == null || ((d[field] is int || d[field] is float) && d[field] >= 0);
+    }
+
+    function optDate(d, field) {
+      return !(field in d) || d[field] == null || (d[field] is string && d[field].matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
+
+    function reqString(d, field, maxLen) {
+      return field in d && d[field] is string && d[field].size() > 0 && d[field].size() <= maxLen;
+    }
+
+    // ---------- profiles ----------
+    function validProfile(d, uid) {
+      return d.keys().hasOnly(['user_id', 'email', 'full_name', 'phone', 'resume_url', 'skills',
+                               'preferred_currency', 'created_at', 'updated_at'])
+        && d.user_id == uid
+        && optString(d, 'full_name', 200)
+        && optString(d, 'phone', 50)
+        && optString(d, 'resume_url', 2048)
+        && (!('skills' in d) || d.skills == null || (d.skills is list && d.skills.size() <= 100))
+        && d.preferred_currency is string && d.preferred_currency.size() <= 10
+        && optString(d, 'created_at', 40)
+        && optString(d, 'updated_at', 40);
+    }
+
+    // ---------- job applications ----------
+    function validApplication(d, uid) {
+      return d.keys().hasOnly(['user_id', 'company_name', 'position_title', 'job_description', 'job_url',
+                               'status', 'job_type', 'location', 'salary_min', 'salary_max', 'salary_currency',
+                               'notes', 'applied_date', 'follow_up_date', 'response_date',
+                               'created_at', 'updated_at'])
+        && d.user_id == uid
+        && reqString(d, 'company_name', 300)
+        && reqString(d, 'position_title', 300)
+        && d.status in ['pending', 'applied', 'interviewing', 'offered', 'rejected', 'withdrawn']
+        && (!('job_type' in d) || d.job_type == null || d.job_type in ['remote', 'hybrid', 'onsite'])
+        && optString(d, 'job_description', 20000)
+        && optString(d, 'job_url', 2048)
+        && optString(d, 'location', 300)
+        && optString(d, 'notes', 20000)
+        && optString(d, 'salary_currency', 10)
+        && optNumber(d, 'salary_min')
+        && optNumber(d, 'salary_max')
+        && d.applied_date is string && d.applied_date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && optDate(d, 'follow_up_date')
+        && optDate(d, 'response_date');
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid)
+        && validProfile(request.resource.data, uid)
+        && (request.resource.data.email == null || request.resource.data.email == request.auth.token.email);
+      allow update: if isOwner(uid)
+        && validProfile(request.resource.data, uid)
+        && request.resource.data.email == resource.data.email      // email cannot be changed
+        && request.resource.data.created_at == resource.data.created_at;
+      allow delete: if false;
+
+      // ---------- job applications ----------
+      match /applications/{appId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create, update: if isOwner(uid) && validApplication(request.resource.data, uid);
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    // Admin dashboard reads every user's applications with a collection-group query
+    match /{path=**}/applications/{appId} {
+      allow read: if isAdmin();
+    }
+
+    // ---------- admin roles ----------
+    // Add an admin: Firebase console → Firestore → create document admins/<their uid>.
+    match /admins/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+  }
+}
