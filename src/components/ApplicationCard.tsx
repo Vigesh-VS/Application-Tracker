@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, safeExternalUrl } from '@/lib/utils';
 
 interface ApplicationCardProps {
   application: JobApplication;
@@ -147,9 +147,9 @@ export function ApplicationCard({
             <span>{format(new Date(application.applied_date), 'MMM d, yyyy')}</span>
           </div>
           
-          {application.job_url && (
+          {safeExternalUrl(application.job_url) && (
             <a
-              href={application.job_url}
+              href={safeExternalUrl(application.job_url)!}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-white hover:underline"

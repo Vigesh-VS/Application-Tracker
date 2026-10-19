@@ -322,6 +322,10 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
                       {pasteMode ? 'Use a URL instead' : 'Paste job description instead'}
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    The job page or pasted text is sent to Google Gemini to read it. Google's free tier may use it to
+                    improve its models, so don't include private information.
+                  </p>
                 </div>
               )}
             </div>
