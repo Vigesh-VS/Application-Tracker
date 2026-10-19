@@ -138,7 +138,36 @@ describe('useIsAdmin', () => {
 });
 
 describe('Dither background', () => {
-  it('renders a canvas and degrades quietly without WebGL2', async () => {
+  it('runs the renderer in a worker when OffscreenCanvas is supported', () => {
+    vi.useFakeTimers();
+    const offscreen = { kind: 'offscreen' };
+    const posted: Array<[unknown, unknown]> = [];
+    const terminate = vi.fn();
+    vi.stubGlobal('Worker', class {
+      postMessage(msg: unknown, transfer: unknown) { posted.push([msg, transfer]); }
+      terminate = terminate;
+    });
+    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+    const transfer = vi.fn(() => offscreen);
+    Object.defineProperty(HTMLCanvasElement.prototype, 'transferControlToOffscreen', { value: transfer, configurable: true });
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext');
+
+    const { unmount } = render(<Dither pixelSize={2} />);
+    act(() => vi.runAllTimers());
+    expect(transfer).toHaveBeenCalledTimes(1);
+    expect(posted[0][0]).toMatchObject({ type: 'init', canvas: offscreen, animated: true, options: { pixelSize: 2 } });
+    expect(posted[0][1]).toEqual([offscreen]); // the canvas is transferred, not copied
+    expect(getContext).not.toHaveBeenCalled(); // no WebGL work on the main thread
+    unmount();
+    expect(terminate).toHaveBeenCalled();
+
+    delete (HTMLCanvasElement.prototype as { transferControlToOffscreen?: unknown }).transferControlToOffscreen;
+    getContext.mockRestore();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('falls back to the main thread and degrades quietly without WebGL2', async () => {
     vi.useFakeTimers();
     const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
