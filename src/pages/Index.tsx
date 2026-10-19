@@ -10,8 +10,11 @@ import {
   Shield, 
   Zap,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  Github
 } from 'lucide-react';
+
+const REPOSITORY_URL = 'https://github.com/Vigesh-VS/Application-Tracker';
 
 const features = [
   {
@@ -28,11 +31,6 @@ const features = [
     icon: <Shield className="h-6 w-6" />,
     title: 'Secure & Private',
     description: 'Your data is encrypted and only accessible by you.',
-  },
-  {
-    icon: <Zap className="h-6 w-6" />,
-    title: 'Bulk Operations',
-    description: 'Update or delete multiple applications at once to save time.',
   },
 ];
 
@@ -168,17 +166,12 @@ export default function Index() {
                     </Link>
                   </Button>
                 ) : (
-                  <>
-                    <Button asChild variant="retro" size="retro" className="gap-2" data-hover>
-                      <Link to="/signup">
-                        Get Started Free
-                        <ArrowRight className="h-5 w-5" />
-                      </Link>
-                    </Button>
-                    <Button asChild variant="retro" size="retro" data-hover>
-                      <Link to="/login">Sign In</Link>
-                    </Button>
-                  </>
+                  <Button asChild variant="retro" size="retro" className="gap-2" data-hover>
+                    <Link to="/signup">
+                      Get Started Free
+                      <ArrowRight className="h-5 w-5" />
+                    </Link>
+                  </Button>
                 )}
               </div>
             </AnimatedSection>
@@ -198,7 +191,7 @@ export default function Index() {
             </p>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {features.map((feature, index) => (
               <FeatureCard key={feature.title} feature={feature} index={index} />
             ))}
@@ -223,15 +216,9 @@ export default function Index() {
 
             {/* Benefits Grid */}
             <AnimatedSection>
-            <ul className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                {benefits.map((benefit, index) => (
-                  <li 
-                    key={benefit} 
-                    className={cn(
-                      "flex items-start gap-3 group",
-                      index === benefits.length - 1 && "md:col-span-2 md:justify-center"
-                    )}
-                  >
+            <ul className="grid gap-4 w-fit max-w-full mx-auto">
+                {benefits.map((benefit) => (
+                  <li key={benefit} className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
                     <span className="text-white/90">{benefit}</span>
                   </li>
@@ -250,7 +237,8 @@ export default function Index() {
               Ready to Get Organized?
             </h2>
             <p className="text-white/80 mb-8 max-w-xl mx-auto">
-              Join thousands of job seekers who use Application Tracker to manage their applications.
+              Paste a job link and let AI fill in the details, follow every application from applied to offer,
+              and see exactly where your job search stands. Free to use with your Google account.
             </p>
             
             {!user && (
@@ -273,12 +261,18 @@ export default function Index() {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 bg-black/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 group" data-hover>
-            <div className="p-1.5 rounded-lg bg-white/20 transition-transform duration-300 group-hover:scale-110">
-              <ClipboardList className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-display font-semibold text-white">Application Tracker</span>
-          </div>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="rounded-full gap-2 border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white"
+            data-hover
+          >
+            <a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer">
+              <Github className="h-4 w-4" />
+              Contribute
+            </a>
+          </Button>
           <p className="text-sm text-white/80">
             Made by Vigesh
           </p>

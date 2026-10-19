@@ -39,6 +39,13 @@
 - README rewritten for the public repository: screenshots (sample data), feature list, flowcharts, setup, security and performance.
 - Supabase migration steps moved to `docs/MIGRATION.md`.
 
+### Landing page
+- Hero: single centered *Get Started Free* button.
+- *Everything You Need*: three features (Bulk Operations removed), evenly aligned.
+- *Take Control*: benefits in one aligned column.
+- *Ready to Get Organized?*: description rewritten to describe this app.
+- Footer: *Contribute* button (links to the GitHub repository) replaces the logo.
+
 ## Known limits
 - The rate limit lives in server memory, so it is per Vercel instance.
 - Naukri blocks automated reads; use *Paste job description*.
