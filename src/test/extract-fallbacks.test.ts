@@ -19,6 +19,7 @@ import {
   unstopToContent,
   analyzePage,
   geminiError,
+  resetRateLimits,
 } from '../../api/_lib/extract';
 import { jwtVerify } from 'jose';
 
@@ -120,6 +121,7 @@ describe('geminiError', () => {
 describe('fallbacks (network mocked)', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
+    resetRateLimits();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
   });
