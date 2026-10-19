@@ -151,3 +151,9 @@ firestore.rules              database security rules
 - **Import from URL says the site blocked it / needs a login / uses JavaScript**: the dialog switches to *Paste job description*. Copy the posting text from the site and paste it there. Optionally add a `FIRECRAWL_API_KEY`.
 - **Import errors in general**: the toast shows the exact step that failed. `npm run dev` (or Vercel → Logs) shows a line per step: `importing job URL`, `Page content: N chars`, `Gemini result`, `Import failed (...)`.
 - **"Gemini model not found"**: Google retires model names over time. Set `GEMINI_MODEL` to a current Flash or Flash-Lite model from <https://ai.google.dev/gemini-api/docs/models>.
+
+---
+
+## Author
+
+**Vigesh** · [GitHub @Vigesh-VS](https://github.com/Vigesh-VS)
