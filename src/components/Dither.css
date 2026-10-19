@@ -6,3 +6,9 @@
   left: 0;
   overflow: hidden;
 }
+
+/* Rendered at one pixel per dither block and scaled up without smoothing */
+.dither-canvas {
+  display: block;
+  image-rendering: pixelated;
+}
