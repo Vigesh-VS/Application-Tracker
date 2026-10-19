@@ -35,6 +35,10 @@
 - Job links only clickable for `http(s)` addresses (blocked `javascript:` links).
 - Dependency fixes; remaining advisories are build-only or not reachable.
 
+### Repository
+- README rewritten for the public repository: screenshots (sample data), feature list, flowcharts, setup, security and performance.
+- Supabase migration steps moved to `docs/MIGRATION.md`.
+
 ## Known limits
 - The rate limit lives in server memory, so it is per Vercel instance.
 - Naukri blocks automated reads; use *Paste job description*.

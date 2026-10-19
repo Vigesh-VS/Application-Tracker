@@ -1,135 +1,161 @@
-# 📋 Job / Internship Application Tracker
+# 📋 Application Tracker
 
-Track job and internship applications with AI-powered import from a job link, analytics, bulk actions and an admin panel.
+Track job and internship applications in one place. Paste a job link and the form fills itself with AI, follow every application through your pipeline, and see your response, offer and rejection rates at a glance.
 
-**Stack:** React 18 · TypeScript · Vite · Tailwind + shadcn/ui · TanStack Query · Recharts · WebGL2 dithered background (runs in a Web Worker)
-**Backend:** Firebase Authentication (Google) · Cloud Firestore · one Vercel serverless function (AI import with Gemini)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore-FFCA28?logo=firebase&logoColor=black)
+![Gemini](https://img.shields.io/badge/Google-Gemini-8E75B2?logo=googlegemini&logoColor=white)
+![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel&logoColor=white)
 
-Everything runs on free tiers. Firebase projects on the free Spark plan don't get paused for inactivity.
+![Landing page](docs/screenshots/landing.png)
 
----
+## Screenshots
+
+| Dashboard | Analytics |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Analytics](docs/screenshots/analytics.png) |
+
+| Add an application (Import from URL) | Profile |
+|---|---|
+| ![Add application](docs/screenshots/add-application.png) | ![Profile](docs/screenshots/profile.png) |
+
+<details>
+<summary>Sign-in page</summary>
+
+![Sign in](docs/screenshots/login.png)
+</details>
+
+*Screenshots use sample data.*
 
 ## Features
 
-- Sign in with Google (account picker every time)
-- Profile with full name (required before using the dashboard) and preferred currency
-- Add, edit and delete applications: company, position, status, job type, location, salary range + currency, job URL, notes, applied / follow-up / response dates
-- **Import from URL**: paste a LinkedIn / Internshala / Unstop / Greenhouse / Lever / company careers link and the form fills itself. For sites that can't be read automatically (login walls, JavaScript-only pages such as Naukri) the dialog switches to **Paste job description** and extracts from the text instead
-- Search by company, position or location; filter by status and job type
-- Bulk select → change status or delete
-- Analytics: totals, offer / rejection / response rates, average response time, pipeline pie chart, top companies, top locations, average salary
-- 8 currencies (INR, USD, EUR, GBP, AED, SGD, CAD, AUD)
-- Admin dashboard: every user with application counts per status, new users this month, active users
+- **Sign in with Google**, with a profile for your name and preferred currency.
+- **Applications**: company, position, status, job type, location, salary range and currency, job link, notes, and applied / follow-up / response dates.
+- **Import from URL**: paste a LinkedIn, Internshala, Unstop, Greenhouse, Lever or company careers link and Gemini fills in the form. For sites that can't be read automatically (login walls, JavaScript-only pages such as Naukri), paste the job description instead.
+- **Search and filters** by company, position, location, status and job type.
+- **Bulk actions**: change status or delete many applications at once.
+- **Analytics**: totals, offer / rejection / response rates, average response time, pipeline chart, top companies, top locations, average salary.
+- **8 currencies**: INR, USD, EUR, GBP, AED, SGD, CAD, AUD.
+- **Admin dashboard**: every user's application counts per status, new and active users.
 
----
+## How it works
 
-## 1. One-time setup (about 15 minutes)
+```mermaid
+flowchart LR
+    U([User]) --> APP[React app<br/>Vercel]
+    APP -- Google sign-in --> AUTH[Firebase Auth]
+    APP -- read / write own data --> DB[(Cloud Firestore)]
+    APP -- job link or pasted text<br/>+ sign-in token --> API["/api/extract-job-details<br/>Vercel function"]
+    API --> GEM[Google Gemini]
+    API -.-> WEB[Job page]
+```
 
-### Firebase
-1. Go to <https://console.firebase.google.com> → **Add project** (Google Analytics is optional).
-2. **Build → Authentication → Get started → Sign-in method → Google → Enable → Save.**
-3. **Build → Firestore Database → Create database** → choose a location (e.g. `asia-south1 (Mumbai)`) → **Production mode**.
-4. **Firestore → Rules** tab → paste the whole contents of [`firestore.rules`](firestore.rules) → **Publish**.
-5. **Project settings (⚙) → General → Your apps → Web (`</>`)** → register an app (no Hosting needed) → copy the `firebaseConfig` values.
+**Import from URL**
 
-### Gemini (for Import from URL)
-6. Get a free API key at <https://aistudio.google.com/apikey>.
+```mermaid
+flowchart TD
+    A[Job link or pasted text] --> B{Signed in?<br/>token verified on server}
+    B -- no --> X1[401 Sign-in required]
+    B -- yes --> C{Within rate limit?}
+    C -- no --> X2[429 Try again later]
+    C -- yes --> D{Pasted text?}
+    D -- yes --> G
+    D -- no --> E{Safe public URL?<br/>no private / internal addresses}
+    E -- no --> X3[400 Not allowed]
+    E -- yes --> F[Read the page<br/>LinkedIn guest page · Unstop API ·<br/>JSON-LD · meta tags · text]
+    F -- login wall or empty page --> X4[Ask the user to paste<br/>the job description]
+    F --> G[Gemini extracts the details<br/>untrusted text fenced · JSON schema · length cap]
+    G --> H[Clean and check the answer<br/>strip links and HTML · block leaked instructions]
+    H --> I[Form is filled in]
+```
 
-### Local config
-7. Copy `.env.example` to `.env` and fill it in:
-   ```
-   VITE_FIREBASE_API_KEY=...
-   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=your-project
-   VITE_FIREBASE_STORAGE_BUCKET=...
-   VITE_FIREBASE_MESSAGING_SENDER_ID=...
-   VITE_FIREBASE_APP_ID=...
-   GEMINI_API_KEY=...
-   ```
-   `FIRECRAWL_API_KEY` is optional. Without it the server reads the job page directly (plus built-in handling for LinkedIn and Unstop). With it, Firecrawl is tried first and the direct read is the fallback.
+## Tech stack
 
-## 2. Run it on your computer
+| Part | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui (Radix), TanStack Query, Recharts |
+| Background | WebGL2 dithered waves, rendered in a Web Worker (OffscreenCanvas) |
+| Auth and database | Firebase Authentication (Google), Cloud Firestore with security rules |
+| AI import | Vercel serverless function, Google Gemini API |
+| Tests | Vitest, Testing Library |
+
+Everything runs on free tiers.
+
+## Getting started
 
 Requires Node.js 20+.
 
+### 1. Firebase
+1. Go to <https://console.firebase.google.com> → **Add project**.
+2. **Build → Authentication → Get started → Sign-in method → Google → Enable → Save.**
+3. **Build → Firestore Database → Create database** → pick a location → **Production mode**.
+4. **Firestore → Rules** → paste the contents of [`firestore.rules`](firestore.rules) → **Publish**.
+5. **Project settings → General → Your apps → Web (`</>`)** → register an app → copy the `firebaseConfig` values.
+
+### 2. Gemini
+Get a free API key at <https://aistudio.google.com/apikey>.
+
+### 3. Configure and run
 ```bash
 npm install
+cp .env.example .env    # then fill in the values
 npm run dev
 ```
+Open <http://localhost:8080>. `npm run dev` also runs the import API.
 
-Open <http://localhost:8080>. Import from URL works locally too: `npm run dev` also runs the API.
+| Variable | Required | Purpose |
+|---|---|---|
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` | yes | Firebase web app config (public identifiers) |
+| `GEMINI_API_KEY` | yes | Import from URL (server only, never sent to the browser) |
+| `GEMINI_MODEL` | no | Defaults to `gemini-3.5-flash-lite` |
+| `FIRECRAWL_API_KEY` | no | Optional scraping service, tried before the direct page read |
 
-## 3. Make yourself admin
+### 4. Make yourself admin (optional)
+1. Sign in once, then copy your **User UID** from Firebase → **Authentication → Users**.
+2. **Firestore → Start collection** `admins` → Document ID = your UID → any field (e.g. `email`) → Save.
+3. Reload the app: an **Admin** button appears. Admins can only be added from the console.
 
-1. Sign in to the app once.
-2. Firebase console → **Authentication → Users** → copy your **User UID**.
-3. **Firestore → Start collection** → Collection ID `admins` → Document ID = *your UID* → add any field (e.g. `email` = your email) → Save.
-4. Reload the app. An **Admin** button appears on the dashboard.
+## Deploy to Vercel
 
-Admins can only be added from the console. The security rules block anyone from making themselves admin through the app.
-
-## 4. Move your old data from Supabase
-
-1. In Supabase, restore the paused project (Dashboard → project → **Restore**), then **Table Editor** → open each table → **Export → CSV**:
-   `profiles`, `job_applications`, `user_roles`. Save them in `scripts/data/` (git-ignored).
-2. Sign in to the **new** app once with each Google account you want to move. Users are matched by email.
-3. Firebase console → **Project settings → Service accounts → Generate new private key** → save as `service-account.json` in the project folder (git-ignored, never commit it).
-4. Preview, then import:
-   ```bash
-   npm run import-data -- --dry-run
-   npm run import-data
-   ```
-   Running it twice is safe, because applications keep their original IDs. Admin roles come across too.
-   Afterwards you can delete `service-account.json`.
-
-## 5. Deploy to Vercel
-
-1. Push this folder to a GitHub repo and import it in Vercel. The Vite framework is detected automatically.
-2. **Vercel → Project → Settings → Environment Variables**: add every variable from your `.env`.
-3. Deploy, then in Firebase: **Authentication → Settings → Authorized domains → Add domain** → your `*.vercel.app` domain (and any custom domain).
-
-If you reuse your old Vercel project, replace its old `VITE_SUPABASE_*` variables with the ones above.
-
----
-
-## How it fits together
-
-```
-Browser (React app)
- ├─ Firebase Auth ............ Google sign-in, session
- ├─ Cloud Firestore .......... users/{uid}                      profile
- │                             users/{uid}/applications/{id}    applications
- │                             admins/{uid}                     admin role
- └─ POST /api/extract-job-details   (Vercel function: api/)
-       1. verifies the Firebase sign-in token
-       2. blocks private/internal URLs (also after DNS lookup and on every redirect)
-       3. reads the page: JSON-LD / meta tags / text (LinkedIn guest page, Unstop API,
-          Firecrawl first if FIRECRAWL_API_KEY is set) — or uses text pasted in the dialog
-       4. Gemini returns company, title, location, job type, salary (+ currency), summary
-       Errors carry a code; "needs_text" makes the dialog offer the paste-text fallback
-```
-
+1. Import this repository in Vercel (the Vite framework is detected automatically).
+2. **Settings → Environment Variables**: add every variable from your `.env`.
+3. Deploy, then in Firebase: **Authentication → Settings → Authorized domains → Add domain** → your Vercel domain.
 
 ## Security and privacy
 
-**Database** ([`firestore.rules`](firestore.rules)): users can only read and write their own profile and applications. Field types and allowed values are validated. Profiles can't be deleted and email can't be changed. Admins get read-only access to everyone's data for the admin dashboard.
+**Database** ([`firestore.rules`](firestore.rules)): users can only read and write their own profile and applications. Field types and allowed values are validated. Profiles can't be deleted and email can't be changed. Admins get read-only access for the admin dashboard, and nobody can make themselves admin.
 
 **Import API** (`api/_lib/extract.ts`):
 - Every request needs a valid Firebase sign-in token, checked on the server.
 - Rate limit per user: 10 imports a minute, 100 a day (kept in server memory, so it resets when Vercel starts a new instance; Gemini's free-tier quota is the hard limit).
 - Links to private or internal addresses are refused, also after DNS lookup and on every redirect (SSRF protection).
 - Request bodies are capped at 200 KB and pages at 3 MB, read as a stream, so huge or compressed "bomb" responses can't exhaust memory. Links to files (PDFs, images) are refused.
-- Prompt-injection guardrails: the extraction rules are sent as Gemini's system instruction, the page text is fenced in tags it cannot close, answers that repeat the instructions are blocked, links/images/HTML are stripped from answers and the answer length is capped.
-- Same-origin only (no CORS headers), responses are `no-store` and `nosniff`.
+- Prompt-injection guardrails: the extraction rules are sent as Gemini's system instruction, the page text is fenced in tags it cannot close, answers that repeat the instructions are blocked, links / images / HTML are stripped from answers and the answer length is capped.
+- Same-origin only (no CORS headers); responses are `no-store` and `nosniff`.
 
 **Website**: `vercel.json` sets a Content-Security-Policy, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. `npm run preview` serves the same headers. Job links are only clickable when they are real `http(s)` addresses.
 
 **Privacy**:
-- Stored in Firestore: your Google email, name, preferred currency and the applications you add. Kept until you delete them (applications can be deleted in the app; ask the admin to remove a profile).
-- Sent to Google Gemini when you use *Import from URL*: the job page text or the text you paste. The Gemini API free tier may use this data to improve Google's products, so don't paste private information. Firecrawl also sees the job URL if `FIRECRAWL_API_KEY` is set.
-- Server logs contain no URLs or page text, only the step and error codes.
+- Stored in Firestore: your Google email, name, preferred currency and the applications you add, until you delete them.
+- Sent to Google Gemini when you use *Import from URL*: the job page text or the text you paste. The Gemini API free tier may use this data to improve Google's products, so don't paste private information. Firecrawl also sees the job link if `FIRECRAWL_API_KEY` is set.
+- Server logs contain no links or page text, only the step and error codes.
 
-**Dependencies**: `npm audit --omit=dev` reports remaining advisories only in build tools (Tailwind CSS 3 toolchain, never shipped to the browser) and one React Router advisory about navigating to user-supplied paths, which this app never does.
+**Dependencies**: `npm audit --omit=dev` only reports advisories in build tools (the Tailwind CSS 3 toolchain, never shipped to the browser) and one React Router advisory about navigating to user-supplied paths, which this app never does.
+
+## Performance
+
+Measured on the production build:
+
+| Metric | Before | After |
+|---|---|---|
+| JavaScript downloaded on first visit (gzip) | 534 KB | 180 KB |
+| Lighthouse mobile, landing page | 50 | 73–87 |
+| Lighthouse desktop, landing page | 68 | 100 |
+| Idle frame rate | 34 fps | 60 fps |
+
+Details in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 ## Scripts
 
@@ -137,33 +163,33 @@ Browser (React app)
 |---|---|
 | `npm run dev` | App + API at http://localhost:8080 |
 | `npm run build` | Production build into `dist/` |
+| `npm run preview` | Serve the production build with the production security headers |
 | `npm test` | Unit tests (security guardrails, URL safety, page parsing, AI import flow, data loading) |
 | `npm run typecheck` | TypeScript check for app, API and config |
 | `npm run lint` | ESLint |
-| `npm run import-data` | Import Supabase CSV exports into Firestore |
+| `npm run import-data` | One-time import of Supabase CSV exports ([`docs/MIGRATION.md`](docs/MIGRATION.md)) |
 
 ## Project structure
 
 ```
 api/
   extract-job-details.ts     Vercel function entry
-  _lib/extract.ts            AI import logic (shared with npm run dev)
-scripts/
-  import-supabase-csv.mjs    one-time data migration
+  _lib/extract.ts            AI import logic and guardrails (shared with npm run dev)
 src/
-  lib/firebase.ts            Firebase setup
-  lib/firestore.ts           Firestore (separate, so signed-out pages don't download it)
-  lib/auth.tsx               Google sign-in (doesn't wait for the database)
-  lib/profileStore.ts        profile read (creates it on first login) / update
-  hooks/useApplications.ts   applications CRUD + bulk actions (Firestore)
-  hooks/useProfile.ts        profile query, shared by every component (one read)
+  lib/firebase.ts            Firebase app + Auth
+  lib/firestore.ts           Firestore (loaded only when signed in)
+  lib/auth.tsx               Google sign-in
+  lib/profileStore.ts        profile read (created on first sign-in) / update
+  hooks/                     applications, profile, admin, currency
   components/Dither.tsx      animated background; WebGL code in components/dither/
-  hooks/useAdmin.ts          admin check + admin stats
-  pages/, components/        UI (unchanged from the original app)
-firestore.rules              database security rules
+  components/, pages/        UI
+  test/                      unit tests
 docs/
   ARCHITECTURE.md            how the app is built
-  PROGRESS.md                what has been done, measurements, known limits
+  PROGRESS.md                changes, measurements, known limits
+  MIGRATION.md               moving data from the old Supabase version
+firestore.rules              database security rules
+vercel.json                  routing and security headers
 ```
 
 ## Troubleshooting
@@ -171,11 +197,9 @@ docs/
 - **"This domain is not authorised"** when signing in: add the domain under Firebase → Authentication → Settings → Authorized domains (`localhost` is there by default).
 - **Sign-in popup closes immediately**: allow popups for the site.
 - **"Missing or insufficient permissions"**: the rules from `firestore.rules` weren't published, or the Firestore database wasn't created.
-- **Import from URL says the site blocked it / needs a login / uses JavaScript**: the dialog switches to *Paste job description*. Copy the posting text from the site and paste it there. Optionally add a `FIRECRAWL_API_KEY`.
-- **Import errors in general**: the toast shows the exact step that failed. `npm run dev` (or Vercel → Logs) shows a line per step: `importing job URL`, `Page content: N chars`, `Gemini result`, `Import failed (...)`.
-- **"Gemini model not found"**: Google retires model names over time. Set `GEMINI_MODEL` to a current Flash or Flash-Lite model from <https://ai.google.dev/gemini-api/docs/models>.
-
----
+- **Import says the site blocked it, needs a login or uses JavaScript**: the dialog switches to *Paste job description*. Copy the posting text from the site and paste it there.
+- **Import errors in general**: the message names the step that failed. `npm run dev` (or Vercel → Logs) shows one line per step.
+- **"Gemini model not found"**: set `GEMINI_MODEL` to a current Flash or Flash-Lite model from <https://ai.google.dev/gemini-api/docs/models>.
 
 ## Author
 
