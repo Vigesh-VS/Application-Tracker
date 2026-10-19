@@ -14,7 +14,7 @@ Everything runs on free tiers. Firebase projects on the free Spark plan don't ge
 - Sign in with Google (account picker every time)
 - Profile with full name (required before using the dashboard) and preferred currency
 - Add, edit and delete applications: company, position, status, job type, location, salary range + currency, job URL, notes, applied / follow-up / response dates
-- **Import from URL**: paste a LinkedIn / Indeed / company careers link and the form fills itself
+- **Import from URL**: paste a LinkedIn / Internshala / Unstop / Greenhouse / Lever / company careers link and the form fills itself. For sites that can't be read automatically (login walls, JavaScript-only pages such as Naukri) the dialog switches to **Paste job description** and extracts from the text instead
 - Search by company, position or location; filter by status and job type
 - Bulk select → change status or delete
 - Analytics: totals, offer / rejection / response rates, average response time, pipeline pie chart, top companies, top locations, average salary
@@ -46,7 +46,7 @@ Everything runs on free tiers. Firebase projects on the free Spark plan don't ge
    VITE_FIREBASE_APP_ID=...
    GEMINI_API_KEY=...
    ```
-   `FIRECRAWL_API_KEY` is optional. Without it the server reads the job page directly. With it, JavaScript-heavy sites that block simple requests work better.
+   `FIRECRAWL_API_KEY` is optional. Without it the server reads the job page directly (plus built-in handling for LinkedIn and Unstop). With it, Firecrawl is tried first and the direct read is the fallback.
 
 ## 2. Run it on your computer
 
@@ -103,8 +103,10 @@ Browser (React app)
  └─ POST /api/extract-job-details   (Vercel function: api/)
        1. verifies the Firebase sign-in token
        2. blocks private/internal URLs (also after DNS lookup and on every redirect)
-       3. reads the page (or uses Firecrawl if FIRECRAWL_API_KEY is set)
+       3. reads the page: JSON-LD / meta tags / text (LinkedIn guest page, Unstop API,
+          Firecrawl first if FIRECRAWL_API_KEY is set) — or uses text pasted in the dialog
        4. Gemini returns company, title, location, job type, salary (+ currency), summary
+       Errors carry a code; "needs_text" makes the dialog offer the paste-text fallback
 ```
 
 **Security** ([`firestore.rules`](firestore.rules)): users can only read and write their own profile and applications. Field types and allowed values are validated. Profiles can't be deleted and email can't be changed. Admins get read-only access to everyone's data for the admin dashboard.
@@ -143,5 +145,6 @@ firestore.rules              database security rules
 - **"This domain is not authorised"** when signing in: add the domain under Firebase → Authentication → Settings → Authorized domains (`localhost` is there by default).
 - **Sign-in popup closes immediately**: allow popups for the site.
 - **"Missing or insufficient permissions"**: the rules from `firestore.rules` weren't published, or the Firestore database wasn't created.
-- **Import from URL says the site blocked it**: some sites (often LinkedIn when logged out) block automated reads. Fill the form manually, or add a `FIRECRAWL_API_KEY`.
+- **Import from URL says the site blocked it / needs a login / uses JavaScript**: the dialog switches to *Paste job description*. Copy the posting text from the site and paste it there. Optionally add a `FIRECRAWL_API_KEY`.
+- **Import errors in general**: the toast shows the exact step that failed. `npm run dev` (or Vercel → Logs) shows a line per step: `importing job URL`, `Page content: N chars`, `Gemini result`, `Import failed (...)`.
 - **"Gemini model not found"**: Google retires model names over time. Set `GEMINI_MODEL` to a current Flash or Flash-Lite model from <https://ai.google.dev/gemini-api/docs/models>.

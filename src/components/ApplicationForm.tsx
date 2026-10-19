@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, Link2, Sparkles } from 'lucide-react';
+import { Loader2, Link2, Sparkles, ClipboardPaste } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 import { CURRENCIES } from '@/types/currency';
@@ -50,6 +50,9 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
   const [extracting, setExtracting] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [importUrl, setImportUrl] = useState('');
+  // "Paste text" fallback for pages that can't be read automatically (login walls, JavaScript-only sites)
+  const [pasteMode, setPasteMode] = useState(false);
+  const [importText, setImportText] = useState('');
   const [formData, setFormData] = useState<ApplicationFormData>({
     company_name: initialData?.company_name || '',
     position_title: initialData?.position_title || '',
@@ -107,11 +110,18 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
     }
   }, [initialData, open]);
 
+  const resetImport = () => {
+    setShowUrlInput(false);
+    setPasteMode(false);
+    setImportUrl('');
+    setImportText('');
+  };
+
   const handleExtractFromUrl = async () => {
-    if (!importUrl.trim()) {
+    if (pasteMode ? !importText.trim() : !importUrl.trim()) {
       toast({
-        title: "URL required",
-        description: "Please enter a job posting URL",
+        title: pasteMode ? "Text required" : "URL required",
+        description: pasteMode ? "Please paste the job description" : "Please enter a job posting URL",
         variant: "destructive",
       });
       return;
@@ -124,16 +134,21 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
         throw new Error('Please sign in to import from a URL');
       }
 
-      const response = await fetch('/api/extract-job-details', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ url: importUrl }),
-      });
+      let response: Response;
+      try {
+        response = await fetch('/api/extract-job-details', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(pasteMode ? { text: importText, url: importUrl || undefined } : { url: importUrl }),
+        });
+      } catch {
+        throw new Error("Couldn't reach the import service. Check your internet connection.");
+      }
 
-      let result: { success?: boolean; error?: string; data?: ImportedJob } | null = null;
+      let result: { success?: boolean; error?: string; code?: string; data?: ImportedJob } | null = null;
       try {
         result = await response.json();
       } catch {
@@ -141,6 +156,8 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
       }
 
       if (!response.ok || !result?.success || !result.data) {
+        // The page can't be read automatically: switch to the paste-text fallback, keeping the URL
+        if (result?.code === 'needs_text' && !pasteMode) setPasteMode(true);
         throw new Error(result?.error || 'Failed to extract job details');
       }
 
@@ -166,8 +183,7 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
         description: "Job details extracted and filled in",
       });
 
-      setShowUrlInput(false);
-      setImportUrl('');
+      resetImport();
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error extracting job details:', error);
       toast({
@@ -236,21 +252,32 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
                     <Sparkles className="h-5 w-5 text-indigo-400 animate-pulse" />
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
-                    Paste a LinkedIn, Indeed, or any job URL to auto-fill the form
+                    Paste a LinkedIn, Indeed, or any job URL (or the job description) to auto-fill the form
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <Label htmlFor="import_url" className="text-sm font-medium">
-                    Paste job posting URL
+                  <Label htmlFor={pasteMode ? 'import_text' : 'import_url'} className="text-sm font-medium">
+                    {pasteMode ? 'Paste the job description' : 'Paste job posting URL'}
                   </Label>
+                  {pasteMode && (
+                    <Textarea
+                      id="import_text"
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                      placeholder="Copy the whole job posting (title, company, location, salary, description) and paste it here..."
+                      rows={6}
+                      className="border-indigo-400/30 bg-indigo-500/5"
+                      disabled={extracting}
+                    />
+                  )}
                   <div className="flex gap-2">
                     <Input
                       id="import_url"
                       type="url"
                       value={importUrl}
                       onChange={(e) => setImportUrl(e.target.value)}
-                      placeholder="https://linkedin.com/jobs/..."
+                      placeholder={pasteMode ? 'Job URL (optional, saved with the application)' : 'https://linkedin.com/jobs/...'}
                       className="flex-1 border-indigo-400/30 bg-indigo-500/5"
                       disabled={extracting}
                     />
@@ -273,18 +300,28 @@ export function ApplicationForm({ open, onOpenChange, onSubmit, initialData }: A
                       )}
                     </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowUrlInput(false);
-                      setImportUrl('');
-                    }}
-                    className="text-muted-foreground"
-                  >
-                    Cancel
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetImport}
+                      className="text-muted-foreground"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPasteMode(!pasteMode)}
+                      disabled={extracting}
+                      className="gap-1.5 text-muted-foreground"
+                    >
+                      {pasteMode ? <Link2 className="h-4 w-4" /> : <ClipboardPaste className="h-4 w-4" />}
+                      {pasteMode ? 'Use a URL instead' : 'Paste job description instead'}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
