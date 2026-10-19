@@ -2,7 +2,7 @@
 
 Track job and internship applications with AI-powered import from a job link, analytics, bulk actions and an admin panel.
 
-**Stack:** React 18 · TypeScript · Vite · Tailwind + shadcn/ui · TanStack Query · Recharts · three.js background
+**Stack:** React 18 · TypeScript · Vite · Tailwind + shadcn/ui · TanStack Query · Recharts · WebGL2 dithered background (runs in a Web Worker)
 **Backend:** Firebase Authentication (Google) · Cloud Firestore · one Vercel serverless function (AI import with Gemini)
 
 Everything runs on free tiers. Firebase projects on the free Spark plan don't get paused for inactivity.
@@ -132,9 +132,12 @@ scripts/
   import-supabase-csv.mjs    one-time data migration
 src/
   lib/firebase.ts            Firebase setup
-  lib/auth.tsx               Google sign-in + creates profile on first login
+  lib/firestore.ts           Firestore (separate, so signed-out pages don't download it)
+  lib/auth.tsx               Google sign-in (doesn't wait for the database)
+  lib/profileStore.ts        profile read (creates it on first login) / update
   hooks/useApplications.ts   applications CRUD + bulk actions (Firestore)
-  hooks/useProfile.ts        profile read/update
+  hooks/useProfile.ts        profile query, shared by every component (one read)
+  components/Dither.tsx      animated background; WebGL code in components/dither/
   hooks/useAdmin.ts          admin check + admin stats
   pages/, components/        UI (unchanged from the original app)
 firestore.rules              database security rules
