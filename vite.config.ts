@@ -35,7 +35,7 @@ function localApi(env: Record<string, string>): Plugin {
             console.error(err);
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ success: false, error: "Local API error" }));
+            res.end(JSON.stringify({ success: false, error: `Local API error: ${err instanceof Error ? err.message : String(err)}` }));
           }
         }
       );
