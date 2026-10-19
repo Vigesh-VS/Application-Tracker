@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useApplications } from '@/hooks/useApplications';
@@ -10,7 +10,6 @@ import { ApplicationCard } from '@/components/ApplicationCard';
 import { ApplicationForm } from '@/components/ApplicationForm';
 import { ApplicationFilters } from '@/components/ApplicationFilters';
 import { BulkActions } from '@/components/BulkActions';
-import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -26,6 +25,11 @@ import {
   Home
 } from 'lucide-react';
 import { JobApplication, ApplicationStatus, JobType, ApplicationFormData } from '@/types/application';
+
+// Charts (recharts) are a large download: load them only for the Analytics tab,
+// prefetched while the browser is idle so the tab still opens instantly.
+const loadAnalytics = () => import('@/components/AnalyticsDashboard');
+const AnalyticsDashboard = lazy(() => loadAnalytics().then((m) => ({ default: m.AnalyticsDashboard })));
 
 interface Filters {
   search: string;
@@ -56,6 +60,16 @@ export default function Dashboard() {
     status: 'all',
     jobType: 'all',
   });
+
+  useEffect(() => {
+    const prefetch = () => void loadAnalytics();
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(prefetch, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(prefetch, 1500);
+    return () => clearTimeout(id);
+  }, []);
 
   const filteredApplications = useMemo(() => {
     return applications.filter(app => {
@@ -271,7 +285,15 @@ export default function Dashboard() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics">
-            <AnalyticsDashboard applications={applications} />
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-white" />
+                </div>
+              }
+            >
+              <AnalyticsDashboard applications={applications} />
+            </Suspense>
           </TabsContent>
         </Tabs>
 

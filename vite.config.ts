@@ -56,6 +56,21 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [react(), localApi(env)],
+    build: {
+      rollupOptions: {
+        output: {
+          // Libraries that rarely change get their own long-cached files, so after a deploy
+          // returning visitors only re-download the app code.
+          manualChunks(id: string) {
+            if (!id.includes("node_modules")) return;
+            if (/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom|@remix-run)\//.test(id)) {
+              return "react-vendor";
+            }
+            if (/node_modules\/(firebase|@firebase)\/(?!firestore)/.test(id)) return "firebase-auth";
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
