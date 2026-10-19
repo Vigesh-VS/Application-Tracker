@@ -109,7 +109,27 @@ Browser (React app)
        Errors carry a code; "needs_text" makes the dialog offer the paste-text fallback
 ```
 
-**Security** ([`firestore.rules`](firestore.rules)): users can only read and write their own profile and applications. Field types and allowed values are validated. Profiles can't be deleted and email can't be changed. Admins get read-only access to everyone's data for the admin dashboard.
+
+## Security and privacy
+
+**Database** ([`firestore.rules`](firestore.rules)): users can only read and write their own profile and applications. Field types and allowed values are validated. Profiles can't be deleted and email can't be changed. Admins get read-only access to everyone's data for the admin dashboard.
+
+**Import API** (`api/_lib/extract.ts`):
+- Every request needs a valid Firebase sign-in token, checked on the server.
+- Rate limit per user: 10 imports a minute, 100 a day (kept in server memory, so it resets when Vercel starts a new instance; Gemini's free-tier quota is the hard limit).
+- Links to private or internal addresses are refused, also after DNS lookup and on every redirect (SSRF protection).
+- Request bodies are capped at 200 KB and pages at 3 MB, read as a stream, so huge or compressed "bomb" responses can't exhaust memory. Links to files (PDFs, images) are refused.
+- Prompt-injection guardrails: the extraction rules are sent as Gemini's system instruction, the page text is fenced in tags it cannot close, answers that repeat the instructions are blocked, links/images/HTML are stripped from answers and the answer length is capped.
+- Same-origin only (no CORS headers), responses are `no-store` and `nosniff`.
+
+**Website**: `vercel.json` sets a Content-Security-Policy, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and HSTS. `npm run preview` serves the same headers. Job links are only clickable when they are real `http(s)` addresses.
+
+**Privacy**:
+- Stored in Firestore: your Google email, name, preferred currency and the applications you add. Kept until you delete them (applications can be deleted in the app; ask the admin to remove a profile).
+- Sent to Google Gemini when you use *Import from URL*: the job page text or the text you paste. The Gemini API free tier may use this data to improve Google's products, so don't paste private information. Firecrawl also sees the job URL if `FIRECRAWL_API_KEY` is set.
+- Server logs contain no URLs or page text, only the step and error codes.
+
+**Dependencies**: `npm audit --omit=dev` reports remaining advisories only in build tools (Tailwind CSS 3 toolchain, never shipped to the browser) and one React Router advisory about navigating to user-supplied paths, which this app never does.
 
 ## Scripts
 
@@ -117,7 +137,7 @@ Browser (React app)
 |---|---|
 | `npm run dev` | App + API at http://localhost:8080 |
 | `npm run build` | Production build into `dist/` |
-| `npm test` | Unit tests (URL safety checks, page parsing, AI import flow) |
+| `npm test` | Unit tests (security guardrails, URL safety, page parsing, AI import flow, data loading) |
 | `npm run typecheck` | TypeScript check for app, API and config |
 | `npm run lint` | ESLint |
 | `npm run import-data` | Import Supabase CSV exports into Firestore |
@@ -141,6 +161,9 @@ src/
   hooks/useAdmin.ts          admin check + admin stats
   pages/, components/        UI (unchanged from the original app)
 firestore.rules              database security rules
+docs/
+  ARCHITECTURE.md            how the app is built
+  PROGRESS.md                what has been done, measurements, known limits
 ```
 
 ## Troubleshooting
