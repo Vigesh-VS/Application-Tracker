@@ -42,7 +42,7 @@
 ### Landing page
 - Hero: single centered *Get Started Free* button.
 - *Everything You Need*: three features (Bulk Operations removed), evenly aligned.
-- *Take Control*: benefits in one aligned column.
+- *Take Control*: four benefits in two columns (the follow-up reminders line removed, since the app records follow-up dates but sends no reminders).
 - *Ready to Get Organized?*: description rewritten to describe this app.
 - Footer: *Contribute* button (links to the GitHub repository) replaces the logo.
 

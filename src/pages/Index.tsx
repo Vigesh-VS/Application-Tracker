@@ -39,7 +39,6 @@ const benefits = [
   'See which companies respond fastest',
   'Track your acceptance and rejection rates',
   'Compare salary ranges across positions',
-  'Set follow-up reminders for pending applications',
 ];
 
 function AnimatedSection({ 
@@ -216,7 +215,7 @@ export default function Index() {
 
             {/* Benefits Grid */}
             <AnimatedSection>
-            <ul className="grid gap-4 w-fit max-w-full mx-auto">
+            <ul className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
                 {benefits.map((benefit) => (
                   <li key={benefit} className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
