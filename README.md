@@ -2,6 +2,11 @@
 
 Track job and internship applications in one place. Paste a job link and the form fills itself with AI, follow every application through your pipeline, and see your response, offer and rejection rates at a glance.
 
+**Live app: [trackyourapplication.vercel.app](https://trackyourapplication.vercel.app)** · Open source under the MIT License · [Contributions welcome](CONTRIBUTING.md)
+
+[![CI](https://github.com/Vigesh-VS/Application-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Vigesh-VS/Application-Tracker/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
@@ -200,6 +205,14 @@ vercel.json                  routing and security headers
 - **Import says the site blocked it, needs a login or uses JavaScript**: the dialog switches to *Paste job description*. Copy the posting text from the site and paste it there.
 - **Import errors in general**: the message names the step that failed. `npm run dev` (or Vercel → Logs) shows one line per step.
 - **"Gemini model not found"**: set `GEMINI_MODEL` to a current Flash or Flash-Lite model from <https://ai.google.dev/gemini-api/docs/models>.
+
+## Contributing
+
+Contributions are welcome, from bug reports and ideas to docs and code. Read the [contributing guide](CONTRIBUTING.md) to get set up, then pick an issue labelled [`good first issue`](https://github.com/Vigesh-VS/Application-Tracker/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or open your own. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report security problems privately as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Vigesh V S. You're free to use, modify and share this code, including commercially, as long as the copyright notice is kept.
 
 ## Author
 
