@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
 
 // These values come from Firebase console → Project settings → Your apps → Web app.
 // They are public identifiers (not secrets); access is enforced by firestore.rules.
@@ -21,7 +20,6 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
 // Always show the account picker (same behaviour as the old app)

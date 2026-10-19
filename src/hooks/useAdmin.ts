@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { collection, collectionGroup, doc, getDoc, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firestore';
 import type { ApplicationStatus } from '@/types/application';
 
 export interface AdminUserStats {
@@ -26,35 +27,22 @@ export interface AdminUserStats {
  */
 export function useIsAdmin() {
   const { user } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function checkAdminStatus() {
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
+  // Cached and shared: the dashboard and admin page (which asks twice) cause a single read per session
+  const { data: isAdmin = false, isLoading } = useQuery({
+    queryKey: ['isAdmin', user?.uid],
+    queryFn: async () => {
       try {
-        const snap = await getDoc(doc(db, 'admins', user.uid));
-        if (!cancelled) setIsAdmin(snap.exists());
+        return (await getDoc(doc(db, 'admins', user!.uid))).exists();
       } catch (err) {
         if (import.meta.env.DEV) console.error('Error checking admin status:', err);
-        if (!cancelled) setIsAdmin(false);
-      } finally {
-        if (!cancelled) setLoading(false);
+        return false;
       }
-    }
-    checkAdminStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+    },
+    enabled: !!user,
+    staleTime: Infinity,
+  });
 
-  return { isAdmin, loading };
+  return { isAdmin, loading: !!user && isLoading };
 }
 
 /** Same numbers as the old get_admin_user_stats() SQL function, computed from Firestore. */

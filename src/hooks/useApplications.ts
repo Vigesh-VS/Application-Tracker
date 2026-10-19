@@ -11,7 +11,7 @@ import {
   writeBatch,
   WriteBatch,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firestore';
 import { useAuth } from '@/lib/auth';
 import { JobApplication, ApplicationFormData, ApplicationStatus } from '@/types/application';
 import { toast } from 'sonner';

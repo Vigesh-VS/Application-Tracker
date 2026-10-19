@@ -5,8 +5,9 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '@/lib/firebase';
+import { useQueryClient } from '@tanstack/react-query';
+import { auth, googleProvider } from '@/lib/firebase';
+import { profileQueryOptions } from '@/lib/profileQuery';
 
 interface AuthContextType {
   user: User | null;
@@ -17,45 +18,24 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Replaces the old Supabase `handle_new_user` trigger: the first time a user
- * signs in, create their profile document at users/{uid}.
- */
-async function ensureProfile(user: User) {
-  const ref = doc(db, 'users', user.uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) return;
-  const now = new Date().toISOString();
-  await setDoc(ref, {
-    user_id: user.uid,
-    email: user.email ?? null,
-    full_name: null,
-    phone: null,
-    resume_url: null,
-    skills: null,
-    preferred_currency: 'INR',
-    created_at: now,
-    updated_at: now,
-  });
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          await ensureProfile(firebaseUser);
-        } catch (err) {
-          if (import.meta.env.DEV) console.error('Could not create profile:', err);
-        }
-      }
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      // Show the app right away; the profile (created on first sign-in) loads in the
+      // background and is shared with every useProfile() caller.
       setUser(firebaseUser);
       setLoading(false);
+      if (firebaseUser) {
+        queryClient.prefetchQuery(profileQueryOptions(firebaseUser)).catch((err) => {
+          if (import.meta.env.DEV) console.error('Could not load profile:', err);
+        });
+      }
     });
-  }, []);
+  }, [queryClient]);
 
   const signInWithGoogle = async () => {
     try {

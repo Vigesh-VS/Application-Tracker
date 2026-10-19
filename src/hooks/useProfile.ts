@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
+import { profileQueryKey, profileQueryOptions } from '@/lib/profileQuery';
 import { toast } from 'sonner';
 
 export interface Profile {
@@ -29,19 +28,9 @@ export function useProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const queryKey = ['profile', user?.uid];
+  const queryKey = profileQueryKey(user?.uid);
 
-  const { data: profile = null, isLoading: loading, error } = useQuery({
-    queryKey,
-    queryFn: async () => {
-      if (!user) return null;
-      const snap = await getDoc(doc(db, 'users', user.uid));
-      if (!snap.exists()) return null;
-      return { id: snap.id, ...snap.data() } as Profile;
-    },
-    enabled: !!user,
-    staleTime: Infinity, // Profile rarely changes, keep it cached indefinitely
-  });
+  const { data: profile = null, isLoading: loading, error } = useQuery(profileQueryOptions(user));
 
   const updateMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
@@ -56,7 +45,8 @@ export function useProfile() {
       if ('skills' in data) update.skills = data.skills && data.skills.length > 0 ? data.skills : null;
       if ('preferred_currency' in data) update.preferred_currency = data.preferred_currency || 'INR';
 
-      await updateDoc(doc(db, 'users', user.uid), update);
+      const { updateProfileDoc } = await import('@/lib/profileStore');
+      await updateProfileDoc(user.uid, update);
       return update;
     },
     onSuccess: (update) => {
