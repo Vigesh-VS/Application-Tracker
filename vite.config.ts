@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import type { IncomingMessage, ServerResponse } from "http";
 
 /**
@@ -43,6 +44,13 @@ function localApi(env: Record<string, string>): Plugin {
   };
 }
 
+/** The security headers from vercel.json, so `npm run preview` behaves like production. */
+function productionHeaders(): Record<string, string> {
+  const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, "vercel.json"), "utf8"));
+  const site = config.headers.find((h: { source: string }) => h.source === "/(.*)");
+  return Object.fromEntries(site.headers.map((h: { key: string; value: string }) => [h.key, h.value]));
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load ALL variables from .env (not only VITE_*) for the local API; they are never sent to the browser.
@@ -54,6 +62,9 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: false,
       },
+    },
+    preview: {
+      headers: productionHeaders(),
     },
     plugins: [react(), localApi(env)],
     build: {
